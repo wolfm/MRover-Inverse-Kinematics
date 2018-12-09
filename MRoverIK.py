@@ -26,7 +26,10 @@ from bpy.types import (Panel,
                        Operator,
                        PropertyGroup,
                        )
-from math import degrees
+
+from math import (degrees,
+                  radians,
+                  )                      
 
 import time
 import datetime
@@ -278,18 +281,35 @@ def recv_commands():
     mysock.bind(("localhost", 8018))
     mysock.listen(5)
     arm_endpoint = bpy.data.objects['End Effector']
+    arm = bpy.data.objects['Arm']
     while True:
         conn, _ = mysock.accept()
         data = conn.recv(1024)
-        delta = json.loads(data.decode('utf8'))
-        print(delta)
-        arm_endpoint.location[0] += delta["deltaX"]
-        arm_endpoint.location[1] += delta["deltaY"]
-        arm_endpoint.location[2] += delta["deltaZ"]
+        message = json.loads(data.decode('utf8'))
+        print(message)
+        if message["message_type"] == "delta":
+            arm_endpoint.location[0] += message["deltaX"]
+            arm_endpoint.location[1] += message["deltaY"]
+            arm_endpoint.location[2] += message["deltaZ"]
 
-        if abs( delta["deltaX"] )>0 or abs( delta["deltaY"] )>0 or abs( delta["deltaZ"] )>0:
-            print("Sending!")
-            send_arm_data()
+            if abs( message["deltaX"] )>0 or abs( message["deltaY"] )>0 or abs( message["deltaZ"] )>0:
+                print("Sending!")
+                send_arm_data()
+        else if message["message_type"] == "manual":
+            #Get references to each bone
+            ab_bone = arm.pose.bones["AB"]
+            bc_bone = arm.pose.bones["BC"]
+            cd_bone = arm.pose.bones["CD"]
+            de_bone = arm.pose.bones["DE"]
+            
+            # axis, angle
+            ab_bone.rotation_euler[0] = radians(message["ab"] + joint_a_zero)
+            bc_bone.rotation_euler[1] = radians(message["bc"] + joint_b_zero)
+            cd_bone.rotation_euler[2] = radians(message["cd"]) + joint_c_zero)
+            de_bone.rotation_euler[0] = radians(message["de"]) + joint_d_zero)
+            print("Finished")
+
+
         
 
 thread = threading.Thread(target=recv_commands)

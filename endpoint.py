@@ -1,22 +1,20 @@
 import socket
+import json
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-sock.bind(('127.0.0.1', 8019))
+sock.connect(('127.0.0.1', 8018))
 print("Bound...")
-sock.listen(1)
+# sock.listen(1)
 sock.settimeout(1)
-conn = None
-while conn is None:
-    try:
-        conn, addr = sock.accept()
-    except socket.timeout:
-        print("Timeout")
+message = {
+    'message_type': 'manual',
+    'ab': 90,
+    'bc': 0,
+    'cd': 0,
+    'de': 0
+}
 
-print("Accepted...")
-while True:
-    try:
-        data = conn.recv(1024)
-        print(data)
-    except socket.timeout:
-    	pass
+sock.sendall(json.dumps(message).encode())
+
+sock.close()
